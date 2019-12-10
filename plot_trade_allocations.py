@@ -1,6 +1,6 @@
-from trade_allocation.spatial import read_shape_files, read_sa2_meta
+from spatial import read_shape_files, read_sa2_meta
 import h5py
-from trade_allocation.lib import colour_polygons_by_vector, collate_weights
+from lib import colour_polygons_by_vector, collate_weights
 import pyexcel as pe
 from sklearn.preprocessing import MinMaxScaler, FunctionTransformer
 import itertools
