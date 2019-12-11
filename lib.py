@@ -5,7 +5,7 @@ from shapely.geometry import Polygon
 from descartes.patch import PolygonPatch
 import numpy as np
 from numpy import genfromtxt
-from trade_allocation.spatial import update_bounding_box
+from spatial import update_bounding_box
 import pandas
 
 

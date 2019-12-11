@@ -11,7 +11,7 @@ import os
 # Directories
 volume = get_local_volume()
 work_path = volume + 'more_projects/emily1/Projects/2018_nesting_paper/visualise_allocation/'
-asgs_path = work_path + 'ASGS/SA2/2011/'
+asgs_path = os.environ['asgs_dir'] + 'SA2/2011/'
 input_path = work_path + 'allocation_results/'
 results_path = work_path + 'finished_figures/'
 

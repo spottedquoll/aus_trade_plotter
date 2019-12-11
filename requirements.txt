@@ -1,11 +1,12 @@
 descartes == 1.1.0
 h5py == 2.8.0
-numpy == 1.15.1
+numpy == 1.17.4
 matplotlib == 2.2.3
 pandas == 0.23.4
-pyexcel == 0.5.9.1
+pyexcel == 0.5.15
 pyexcel-xls == 0.5.8
-pyexcel-xlsx == 0.5.6
+pyexcel-xlsx == 0.5.7
 pyshp == 1.2.12
+scikit-learn == 0.22
 Shapely == 1.6.4.post2
 xlsxwriter == 1.1.0
