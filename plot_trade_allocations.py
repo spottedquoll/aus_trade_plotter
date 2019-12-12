@@ -52,7 +52,7 @@ colour_bar = [True]  # True, False
 discrete_colours = [15, None]  # 5, False
 sectors = ['beef']  # , 'beef', 'meat'
 years = ['2009']  # '2000','2005',
-hard_norm = [None, 'minmax', 'log']  #  True, normalise data prior to plotting
+hard_norm = [None, 'minmax', 'log']  # True, normalise data prior to plotting
 common_colour_scale = [False, True]
 fix_combined_scaling = True
 
