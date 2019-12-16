@@ -275,7 +275,7 @@ def plot_qld_beef_exports_single_port(method, trade_direction, all_shapes, input
 
 def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_file_name, bounding_box=None
                               , normalisation='linear', colour_map='plasma', attach_colorbar=False, discrete_bins=None
-                              , colour_min_max=None, polygon_edge='none'):
+                              , colour_min_max=None, polygon_edge='none', plot_background=None, show_frame=True):
 
     # Determine colour scaling from data or use exogenous data
     if colour_min_max is None:
@@ -294,7 +294,7 @@ def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_f
     count = 0
 
     # Set up plot
-    plt.figure()
+    fig = plt.figure(facecolor=plot_background)
     ax = plt.axes()
     ax.set_aspect('equal')
 
@@ -333,9 +333,20 @@ def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_f
 
         count = count + 1
 
+    # Plot limits
     if bounding_box is not None:
         plt.xlim(bounding_box[0], bounding_box[1])
         plt.ylim(bounding_box[2], bounding_box[3])
+
+    # Frame around plot (cannot simply turn axes off, as this interfers with plot background colour
+    if show_frame is False:
+        for spine in plt.gca().spines.values():
+            spine.set_visible(False)
+        plt.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
+
+    # Figure background colour
+    if plot_background is not None:
+        ax.set_facecolor(plot_background)
 
     if attach_colorbar:
         sm = plt.cm.ScalarMappable(cmap=getattr(plt.cm, colour_map), norm=plt.Normalize(vmin=min_val, vmax=max_val))
