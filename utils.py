@@ -1,4 +1,5 @@
 import pyexcel as pe
+from numpy import sign, isscalar
 
 
 def flatten_list(list_of_lists):
@@ -25,3 +26,21 @@ def clean_string(raw_str, bad_characters, replacement, case=None):
             raise ValueError('Unknown case')
 
     return raw_str
+
+
+def is_within_tolerance(val_1, val_2, tol):
+    assert tol <= 1
+    assert tol > 0
+    assert isscalar(val_1)
+    assert isscalar(val_2)
+
+    if sign(val_1) == sign(val_2) and sign(val_1) == -1:
+        val_1 = abs(val_1)
+        val_2 = abs(val_2)
+
+    if val_1 == val_2:
+        return True
+    elif val_2 * (1 - tol) < val_1 < val_2 * (1 + tol):
+        return True
+    else:
+        return False

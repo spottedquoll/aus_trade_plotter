@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 from spatial import read_shape_files, read_sa2_meta
 from lib import colour_polygons_by_vector
-from utils import flatten_list, is_empty, clean_string
+from utils import flatten_list, is_empty, clean_string, is_within_tolerance
 from pyexcel_xlsx import get_data
 
 #  Create save directory
@@ -36,86 +36,104 @@ bird_labels = flatten_list(data['Sheet1'])
 # Figure bounding box [x_min, x_max, y_min, y_max]
 aus_bounding_box = [110, 155, -45, -5]
 
-fd_segments = ['USA', 'DEU']
+# Options
+fd_segments = ['USA', 'DEU', 'JPN']
+fd_products = ['all_products', 'aus_products', 'aus_agri_products', 'all_agri_products']
+
+remove_border_box = 1
+if remove_border_box == 1:
+    border_box = None
+else:
+    border_box = aus_bounding_box
+
+divide_intensity_among_sa2s = 1  # divide total threat intensity among member SA2s in base region
+
 # Loop over countries
 for fd_seg in fd_segments:
 
     print('Using ' + fd_seg + ' final demand')
 
-    # Footprints
-    field_name = 'footprints_' + fd_seg + '_fd_aus_subregions'
-    footprints_by_subregion = list(f[field_name])
+    for product in fd_products:
 
-    # Fix orientation of footprints data (no. of subregions in the SA2 list matches no. of footprints regions)
-    footprints_by_subregion = np.rot90(footprints_by_subregion, k=1)
+        # Footprints
+        field_name = 'footprints_fdseg_' + fd_seg + '_' + product
+        footprints_by_subregion = list(f[field_name])
 
-    assert max(subnat_region_legend) == footprints_by_subregion[0].shape
-    assert len(footprints_by_subregion) == len(bird_labels)
+        # Fix orientation of footprints data (no. of subregions in the SA2 list matches no. of footprints regions)
+        footprints_by_subregion = np.rot90(footprints_by_subregion, k=1)
 
-    # Draw the base region outlines
+        assert max(subnat_region_legend) == footprints_by_subregion[0].shape
+        assert len(footprints_by_subregion) == len(bird_labels)
 
-    # Plot the threats intensity over Aus (All birds same figure)
-    print('Plotting all birds same figure')
+        # Plot the threats intensity over Aus (All birds same figure)
+        print('Plotting all birds same figure')
 
-    # Make data structure to plot
-    intensity_by_sa2 = np.zeros(n_sa2s)
+        # Make data structure to plot
+        intensity_by_sa2 = np.zeros(n_sa2s)
 
-    for i, b in enumerate(bird_labels):
+        for i, b in enumerate(bird_labels):
 
-        # The footprints for this bird
-        footprint_set = footprints_by_subregion[i]
+            # The footprints for this bird
+            footprint_set = footprints_by_subregion[i]
 
-        # Check there is a nonzero footprint for this bird
-        if sum(footprint_set) != 0:
+            # Check there is a nonzero footprint for this bird
+            if sum(footprint_set) != 0:
 
-            # Link each sub-national footprint value with member SA2s
-            for j, val in enumerate(subnat_region_legend):
-                parent_base_region = int(subnat_region_legend[j])
-                intensity_by_sa2[j] = intensity_by_sa2[j] + footprint_set[parent_base_region-1]
+                # Link each sub-national footprint value with member SA2s
+                for j, val in enumerate(subnat_region_legend):
+                    parent_base_region = int(subnat_region_legend[j])
+                    intensity_value = footprint_set[parent_base_region-1]
+                    if intensity_value > 0:
+                        if divide_intensity_among_sa2s == 0:
+                            intensity_by_sa2[j] = intensity_by_sa2[j] + intensity_value
+                        else:
+                            matches = len([p for p in subnat_region_legend if p == parent_base_region])
+                            intensity_by_sa2[j] = intensity_by_sa2[j] + intensity_value/matches
 
-    assert not is_empty(intensity_by_sa2)
-    assert sum(intensity_by_sa2) > sum(sum(footprints_by_subregion))
+        assert not is_empty(intensity_by_sa2)
+        assert is_within_tolerance(sum(intensity_by_sa2), sum(sum(footprints_by_subregion)), 0.001)
 
-    # Send to plotter
-    save_fname = save_dir + '/' + 'all_birds_' + fd_seg.lower() + '.png'
-    regions_to_plot = list(range(1, n_sa2s+1))
-    colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
-                              bounding_box=aus_bounding_box)
+        # Send to plotter
+        description = field_name.lower().replace('footprints_', '')
+        save_fname = save_dir + '/' + 'all_birds_' + description + '.png'
+        regions_to_plot = list(range(1, n_sa2s+1))
+        colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
+                                  bounding_box=aus_bounding_box)
 
-    # For each bird plot the threats intensity over Aus (Plot each bird in separate figure)
-    print('Plotting birds on separate figures')
+        # For each bird plot the threats intensity over Aus (Plot each bird in separate figure)
+        print('Plotting birds on separate figures')
 
-    for i, b in enumerate(bird_labels):
+        for i, b in enumerate(bird_labels):
 
-        bird_name = bird_labels[i]
+            bird_name = bird_labels[i]
 
-        # The footprints for this bird
-        footprint_set = footprints_by_subregion[i]
+            # The footprints for this bird
+            footprint_set = footprints_by_subregion[i]
 
-        # Check there is a nonzero footprint for this bird
-        if sum(footprint_set) != 0:
+            # Check there is a nonzero footprint for this bird
+            if sum(footprint_set) != 0:
 
-            print('Plotting ' + bird_name)
+                print('Plotting ' + bird_name + ' for ' + fd_seg + ' final demand')
 
-            # Make data structure to plot
-            intensity_by_sa2 = []
+                # Make data structure to plot
+                intensity_by_sa2 = []
 
-            # Link each sub-national footprint value with member SA2s
-            for j, val in enumerate(subnat_region_legend):
-                parent_base_region = int(subnat_region_legend[j])
-                intensity_by_sa2.append(footprint_set[parent_base_region-1])
+                # Link each sub-national footprint value with member SA2s
+                for j, val in enumerate(subnat_region_legend):
+                    parent_base_region = int(subnat_region_legend[j])
+                    intensity_by_sa2.append(footprint_set[parent_base_region-1])
 
-            assert not is_empty(intensity_by_sa2)
-            assert sum(intensity_by_sa2) > 0
+                assert not is_empty(intensity_by_sa2)
+                assert sum(intensity_by_sa2) > 0
 
-            # Send to plotter
-            save_fname = save_dir + '/' + clean_string(bird_name, [' ', "'"], '_', case='lower') + '_' \
-                         + fd_seg.lower() + '.png'
-            regions_to_plot = list(range(1, n_sa2s+1))
-            colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
-                                      bounding_box=aus_bounding_box)
-        else:
-            print('Skipping ' + bird_name)
+                # Send to plotter
+                clean_bird_name = clean_string(bird_name, [' ', "'"], '_', case='lower')
+                save_fname = save_dir + '/' + clean_bird_name + '_' + field_name.lower() + '.png'
+                regions_to_plot = list(range(1, n_sa2s+1))
+                colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
+                                          bounding_box=aus_bounding_box)
+            else:
+                print('Skipping ' + bird_name)
 
 # Some base regions have no impacts
 
