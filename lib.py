@@ -275,7 +275,8 @@ def plot_qld_beef_exports_single_port(method, trade_direction, all_shapes, input
 
 def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_file_name, bounding_box=None
                               , normalisation='linear', colour_map='plasma', attach_colorbar=False, discrete_bins=None
-                              , colour_min_max=None, polygon_edge='none', plot_background=None, show_frame=True):
+                              , colour_min_max=None, polygon_edge='none', plot_background=None, show_frame=True
+                              , quality=900):
 
     # Determine colour scaling from data or use exogenous data
     if colour_min_max is None:
@@ -353,7 +354,7 @@ def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_f
         sm._A = []
         plt.colorbar(sm)
 
-    plt.savefig(save_file_name, dpi=1400, bbox_inches='tight')
+    plt.savefig(save_file_name, dpi=quality, bbox_inches='tight')
     plt.clf()
     plt.close("all")
 
