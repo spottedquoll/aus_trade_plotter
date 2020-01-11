@@ -34,29 +34,34 @@ base_region_state_key = read_sa2_meta(birds_dir + '/results/' + 'base_region_sta
 data = get_data(birds_dir + '/results/' + 'birds_satellite_labels.xlsx')
 bird_labels = flatten_list(data['Sheet1'])
 
+assert f[list(f)[0]].shape[1] == len(bird_labels)  # labels dim matches data
+
 # Figure bounding box [x_min, x_max, y_min, y_max]
 aus_bounding_box = [112, 155, -45, -9]
 
 # Footprint dimensions
-fd_segments = ['USA', 'JPN']  # , 'GBR', 'DEU', 'CHN', IND, FRA
-fd_products = ['aus_agri_products']  # 'all_products', 'aus_products', 'all_agri_products'
+fd_segments = ['ALL', 'USA']  # , 'JPN', 'DEU', 'GBR', 'DEU', 'CHN', IND, FRA
+fd_products = ['aus_agri_products', 'all_products']  # , 'aus_products', 'all_agri_products'
+stressor = 'threatsall'  # , 'threatsbeef']
 
 # Options
+clean_save_dir = False  # Deletes previous results!
 regions_to_plot = list(range(1, n_sa2s + 1))
 draw_frame = False  # Frame around plot
 divide_intensity_among_sa2s = True  # divide total threat intensity among member SA2s in base region
 colourings = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
 plot_background_colour = 'gainsboro'
-colour_normalisation = ['symlog']  # , 'log', 'linear'
+colour_normalisation = ['symlog', 'linear']  # , 'log'
 figure_quality = 600  # dpi
 common_colour_options = [True]  # True, False
 results_offset = 4  # 1
 
 plot_all_birds = False  # All bird footprints, driven by a country, on the one figure
+plot_all_birds_at_sa2 = True
 plot_separate_birds = False  # Each bird and country pair plotted on a new figure
 plot_subregion_fd = False
 plot_custom_region_groups = False
-plot_custom_bird_groups = True
+plot_custom_bird_groups = False
 
 # Custom regions [[NSW, Qld], Qld only, NT and WA]
 custom_regions = [[1, 3, 7, 12, 13, 14, 15, 16, 17, 18, 19]
@@ -70,8 +75,6 @@ custom_bird_subset = [0, 10, 11, 12, 13]
 
 # Output directory
 print('Creating save directory')
-
-clean_save_dir = True
 save_dir = os.environ['save_dir']
 if not os.path.isdir(save_dir):
     os.mkdir(save_dir)
@@ -82,6 +85,7 @@ elif clean_save_dir:
 # Precalculate the value ranges for each product set, to allow common colour scaling (combined over countries)
 #   Sum over all birds
 if True in common_colour_options:
+
     print('Creating limits for max-min colour scaling')
 
     limits_of_product_sets = {}
@@ -91,7 +95,7 @@ if True in common_colour_options:
         combine = []
 
         for fd_seg in fd_segments:
-            field_name = 'footprints_fdseg_' + fd_seg + '_' + product
+            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
             footprints_by_subregion = list(f[field_name])
             combine.append(flatten_list(footprints_by_subregion))
 
@@ -113,8 +117,9 @@ if True in common_colour_options:
 
             for fd_seg in fd_segments:
 
-                field_name = 'footprints_fdseg_' + fd_seg + '_' + product
+                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
                 footprints_by_subregion = list(f[field_name])
+                footprints_by_subregion = np.transpose(footprints_by_subregion)
                 combine.append(footprints_by_subregion[i])
 
             limits_of_product_sets_by_bird[product][bird_name]['min'] = min(flatten_list(combine))
@@ -129,7 +134,7 @@ if True in common_colour_options:
         for k in base_regions:
 
             # Unpack footprints from store
-            field_name = 'footprints_fdseg_' + fd_seg + '_' + product + '_' + str(int(k))
+            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
             footprints_by_subregion = list(f[field_name])
             combine.append(flatten_list(footprints_by_subregion))
 
@@ -140,7 +145,7 @@ else:
     limits_of_product_sets = []
 
 # Test input data
-test_field = 'footprints_fdseg_USA_aus_products'
+test_field = 'footprints_fdsegUSA_aus_products' + '_' + stressor
 test_bird = 'Alligator Rivers Yellow Chat'
 if test_field in list(f) and test_bird in bird_labels:
 
@@ -159,7 +164,7 @@ for fd_seg in fd_segments:
     for product in fd_products:
 
         # Unpack footprints from store
-        field_name = 'footprints_fdseg_' + fd_seg + '_' + product
+        field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
         footprints_by_subregion = list(f[field_name])
 
         # Fix orientation of footprints data (no. of subregions in the SA2 list matches no. of footprints regions)
@@ -350,7 +355,7 @@ for fd_seg in fd_segments:
                             for k in base_regions_subset:
 
                                 # Unpack footprints from store
-                                field_name = 'footprints_fdseg_' + fd_seg + '_' + product + '_' + str(int(k))
+                                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
                                 footprints_by_subregion_and_br = list(f[field_name])
 
                                 # Fix orientation of footprints data
@@ -421,7 +426,7 @@ for fd_seg in fd_segments:
                         for k in base_regions_subset:  # Each base region in the set
 
                             # Unpack footprints from store
-                            field_name = 'footprints_fdseg_' + fd_seg + '_' + product + '_' + str(int(k))
+                            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
                             footprints_by_subregion_and_br = list(f[field_name])
 
                             # Fix orientation of footprints data
@@ -472,6 +477,54 @@ for fd_seg in fd_segments:
                                                       , plot_background=plot_background_colour
                                                       , show_frame=draw_frame, normalisation=cs
                                                       , colour_min_max=scaling_limits)
+
+
+# Plot the threats intensity over Aus for each SA2 (All birds same figure)
+if plot_all_birds_at_sa2 is True:
+    print('Plotting footprints at SA2')
+
+    for common_colour_scaling in common_colour_options:
+        for fd_seg in fd_segments:
+            for product in fd_products:
+
+                # Unpack footprints from store
+                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor + '_sa2'
+                footprints_by_subregion = list(f[field_name])
+
+                # Fix orientation of footprints data
+                footprints_by_subregion = np.transpose(footprints_by_subregion)
+                assert len(subnat_region_legend) == footprints_by_subregion[0].shape[0]
+                assert len(footprints_by_subregion) == len(bird_labels)
+
+                # Colour scaling can be set to use same min-max for all figures (should SA2s have own colour scaling??)
+                if common_colour_scaling:
+                    scaling_limits = (limits_of_product_sets[product]['min'] * 0.95,
+                                      limits_of_product_sets[product]['max'] * 1.05)
+                else:
+                    scaling_limits = None
+
+                intensity_by_sa2 = np.zeros(n_sa2s)  # Make data structure to plot
+
+                # Get the footprints for each bird
+                for i, b in enumerate(bird_labels):
+                    intensity_by_sa2 = intensity_by_sa2 + footprints_by_subregion[i]
+
+                assert not is_empty(intensity_by_sa2)
+                assert sum(intensity_by_sa2) > 0
+
+                for cs in colour_normalisation:
+
+                    # Send to plotter
+                    description = field_name.lower().replace('footprints_', '')
+                    save_fname = save_dir + '/' + 'all_birds_' + description + '_' + colourings.lower() + '_' + cs
+                    if common_colour_scaling:
+                        save_fname = save_fname + '_comcol'
+                    save_fname = save_fname + '_sa2' + '.png'
+
+                    colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
+                                              bounding_box=aus_bounding_box, colour_map=colourings,
+                                              plot_background=plot_background_colour, show_frame=draw_frame
+                                              , normalisation=cs, quality=figure_quality, colour_min_max=scaling_limits)
 
 print('.')
 print('Finished')
