@@ -5,7 +5,7 @@ from shapely.geometry import Polygon
 from descartes.patch import PolygonPatch
 import numpy as np
 from numpy import genfromtxt
-from spatial import update_bounding_box
+from utils import clean_string
 import pandas
 
 
@@ -36,241 +36,6 @@ class MplColorHelper:
 
     def get_rgb(self, val):
         return self.scalarMap.to_rgba(val)
-
-
-def plot_qld_beef_exports(method, trade_direction, all_shapes, input_path, results_path, qld_sa2_members
-                          , normalise=True, colour_map='plasma'):
-
-    print('Plotting Queensland beef allocation weights...')
-
-    # Get the trade allocation
-    trade_data = genfromtxt(input_path + method + '_' + trade_direction + '_beef_domestic_flows_qld.csv',
-                            delimiter=',')
-
-    region_totals = np.sum(trade_data, axis=1)  # sum over the port dimension
-    if normalise:
-        region_totals = region_totals / sum(region_totals)
-        scaling = 'nmld'
-        if sum(region_totals) > 1.001 or sum(region_totals) < 0.999:
-            raise ValueError('Normalisation failed')
-        min_val = 0
-        max_val = 1
-    else:
-        scaling = 'raw'
-        min_val = np.min(region_totals)
-        max_val = np.max(region_totals)
-
-    colour_scaling = MplColorHelper(colour_map, min_val, max_val, normalisation='symlog')
-
-    if len(trade_data) != len(qld_sa2_members):
-        raise ValueError('SA2 count does not match trade data dimension')
-
-    count = 0
-    bounding_box = None
-
-    # Set up plot
-    plt.figure()
-    ax = plt.axes()
-    ax.set_aspect('equal')
-
-    # Read and plot all the shape files
-    for index in qld_sa2_members:
-
-        shape = all_shapes[int(index) - 1]
-        polygon_parts = len(shape.parts)
-
-        colour_rgb = colour_scaling.get_rgb(region_totals[count])
-        # scaled_colours = [colour_rgb[0], colour_rgb[1], colour_rgb[2]]
-
-        if polygon_parts == 1:
-            polygon = Polygon(shape.points)
-
-            patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-            ax.add_patch(patch)
-
-            bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        elif polygon_parts > 1:
-            for ip in range(polygon_parts):  # loop over parts, plot separately
-                i0 = shape.parts[ip]
-                if ip < polygon_parts - 1:
-                    i1 = shape.parts[ip + 1] - 1
-                else:
-                    i1 = len(shape.points)
-
-                polygon = Polygon(shape.points[i0:i1 + 1])
-
-                patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-                ax.add_patch(patch)
-                bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        count = count + 1
-
-    plt.xlim(136, 155)
-    plt.ylim(-30, -8)
-    # plt.show()
-
-    plt.savefig(results_path + 'queensland_beef_' + trade_direction + '_' + method + '_' + colour_map + '_' + scaling
-                + '.png', dpi=1400, bbox_inches='tight')
-    plt.clf()
-    plt.close("all")
-
-
-def plot_aus_beef_exports(method, trade_direction, all_shapes, input_path, results_path, normalise=None
-                          , colour_map='plasma'):
-
-    print('Plotting Australian beef allocation weights...')
-
-    # Get the trade allocation
-    trade_data = genfromtxt(input_path + method + '_' + trade_direction + '_beef_domestic_flows_aus.csv',
-                            delimiter=',')
-
-    region_totals = trade_data
-
-    if normalise is None:
-        region_totals = region_totals / max(region_totals)
-        if max(region_totals) > 1.001:
-            raise ValueError('Normalisation failed')
-
-    colour_scaling = MplColorHelper(colour_map, np.min(region_totals), np.max(region_totals))
-
-    if len(region_totals) != len(all_shapes):
-        raise ValueError('SA2 count does not match trade data dimension')
-
-    count = 0
-    bounding_box = None
-
-    # Set up plot
-    plt.figure()
-    ax = plt.axes()
-    ax.set_aspect('equal')
-
-    # Read and plot all the shape files
-    for shape in all_shapes:
-
-        polygon_parts = len(shape.parts)
-
-        colour_rgb = colour_scaling.get_rgb(region_totals[count])
-
-        if polygon_parts == 1:
-            polygon = Polygon(shape.points)
-
-            patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-            ax.add_patch(patch)
-
-            bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        elif polygon_parts > 1:
-            for ip in range(polygon_parts):  # loop over parts, plot separately
-                i0 = shape.parts[ip]
-                if ip < polygon_parts - 1:
-                    i1 = shape.parts[ip + 1] - 1
-                else:
-                    i1 = len(shape.points)
-
-                polygon = Polygon(shape.points[i0:i1 + 1])
-
-                patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-                ax.add_patch(patch)
-                bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        count = count + 1
-
-    plt.xlim(110, 155)
-    plt.ylim(-45, -5)
-
-    plt.savefig(results_path + 'aus_beef_exports_' + trade_direction + '_' + method + '_' + colour_map
-                + '_allports.png', dpi=1400, bbox_inches='tight')
-    plt.clf()
-
-
-def plot_qld_beef_exports_single_port(method, trade_direction, all_shapes, input_path, results_path, qld_sa2_members
-                                      , port_name, port_locations, normalise=True, colour_map='plasma'):
-
-    print('Plotting Queensland beef allocation weights from ' + port_name)
-
-    # Get the trade allocation
-    trade_data = genfromtxt(input_path + method + '_' + trade_direction + '_beef_domestic_flows_qld.csv',
-                            delimiter=',')
-
-    # Find the appropriate port locations
-    port_locations_pd = pandas.DataFrame(port_locations)
-    matching_ports = port_locations_pd.index[port_locations_pd['Port Name'] == port_name].tolist()
-    if len(matching_ports) == 0:
-        raise ValueError('Port could not be found')
-
-    # Squash the totals
-    a = np.array(trade_data)
-    region_totals = None
-    for m in matching_ports:
-        if region_totals is None:
-            region_totals = a[:, m]
-        else:
-             region_totals = region_totals + a[:, m]
-
-    if normalise:
-        region_totals = region_totals / sum(region_totals)
-        scaling = 'nmld'
-        if sum(region_totals) > 1.001 or sum(region_totals) < 0.999:
-            raise ValueError('Normalisation failed')
-
-    else:
-        scaling = 'raw'
-
-    colour_scaling = MplColorHelper(colour_map, np.min(region_totals), np.max(region_totals), normalisation = 'linear')
-
-    if len(trade_data) != len(qld_sa2_members):
-        raise ValueError('SA2 count does not match trade data dimension')
-
-    count = 0
-    bounding_box = None
-
-    # Set up plot
-    plt.figure()
-    ax = plt.axes()
-    ax.set_aspect('equal')
-
-    # Read and plot all the shape files
-    for index in qld_sa2_members:
-
-        shape = all_shapes[int(index) - 1]
-        polygon_parts = len(shape.parts)
-
-        colour_rgb = colour_scaling.get_rgb(region_totals[count])
-        # scaled_colours = [colour_rgb[0], colour_rgb[1], colour_rgb[2]]
-
-        if polygon_parts == 1:
-            polygon = Polygon(shape.points)
-
-            patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-            ax.add_patch(patch)
-
-            bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        elif polygon_parts > 1:
-            for ip in range(polygon_parts):  # loop over parts, plot separately
-                i0 = shape.parts[ip]
-                if ip < polygon_parts - 1:
-                    i1 = shape.parts[ip + 1] - 1
-                else:
-                    i1 = len(shape.points)
-
-                polygon = Polygon(shape.points[i0:i1 + 1])
-
-                patch = PolygonPatch(polygon, fc=(colour_rgb[0], colour_rgb[1], colour_rgb[2], 0.7), ec="none")
-                ax.add_patch(patch)
-                bounding_box = update_bounding_box(bounding_box, shape.bbox)
-
-        count = count + 1
-
-    plt.xlim(136, 155)
-    plt.ylim(-30, -8)
-    # plt.show()
-
-    plt.savefig(results_path + 'queensland_beef_' + trade_direction + '_' + method + '_' + colour_map + '_' + scaling
-                + '_port=' + port_name + '.png', dpi=1400, bbox_inches='tight')
-    plt.clf()
-    plt.close("all")
 
 
 def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_file_name, bounding_box=None
@@ -411,3 +176,17 @@ def get_port_index(port_name, port_locations):
         raise ValueError('Port could not be found')
 
     return matching_ports
+
+
+def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, colour_option=None):
+
+    prefix = clean_string(prefix, [' ', "'"], '_', case='lower')
+    description = field_name.lower().replace('footprints_', '')
+
+    save_fname = save_dir + '/' + prefix + '_' + description + '_' + colour_name.lower() + '_' + normalisation
+
+    if colour_option is not None and colour_option is True:
+        save_fname = save_fname + '_comcol'
+
+    save_fname = save_fname + '.png'
+    return save_fname

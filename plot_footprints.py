@@ -3,8 +3,8 @@ import h5py
 import numpy as np
 import shutil
 from spatial import read_shape_files, read_sa2_meta
-from lib import colour_polygons_by_vector
-from utils import flatten_list, is_empty, clean_string, is_within_tolerance
+from lib import colour_polygons_by_vector, make_save_name
+from utils import flatten_list, is_empty, is_within_tolerance
 from pyexcel_xlsx import get_data
 
 print('Starting footprint plotter')
@@ -49,7 +49,7 @@ clean_save_dir = False  # Deletes previous results!
 regions_to_plot = list(range(1, n_sa2s + 1))
 draw_frame = False  # Frame around plot
 divide_intensity_among_sa2s = True  # divide total threat intensity among member SA2s in base region
-colourings = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
+colour_palette = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
 plot_background_colour = 'gainsboro'
 colour_normalisation = ['symlog', 'linear']  # , 'log'
 figure_quality = 600  # dpi
@@ -214,14 +214,11 @@ for fd_seg in fd_segments:
                 for cs in colour_normalisation:
 
                     # Send to plotter
-                    description = field_name.lower().replace('footprints_', '')
-                    save_fname = save_dir + '/' + 'all_birds_' + description + '_' + colourings.lower() + '_' + cs
-                    if common_colour_scaling:
-                        save_fname = save_fname + '_comcol'
-                    save_fname = save_fname + '.png'
+                    save_fname = make_save_name(save_dir, 'all_birds', field_name, colour_palette, cs,
+                                                colour_option=common_colour_scaling)
 
                     colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
-                                              bounding_box=aus_bounding_box, colour_map=colourings,
+                                              bounding_box=aus_bounding_box, colour_map=colour_palette,
                                               plot_background=plot_background_colour, show_frame=draw_frame
                                               , normalisation=cs, quality=figure_quality, colour_min_max=scaling_limits)
 
@@ -255,20 +252,15 @@ for fd_seg in fd_segments:
                         for cs in colour_normalisation:
 
                             # Send to plotter
-                            description = field_name.lower().replace('footprints_', '')
-                            clean_bird_name = clean_string(bird_name, [' ', "'"], '_', case='lower')
-                            save_fname = (save_dir + '/' + clean_bird_name + '_' + description + '_'
-                                                   + colourings.lower() + '_' + cs)
-                            if common_colour_scaling:
-                                save_fname = save_fname + '_comcol'
-                            save_fname = save_fname + '.png'
+                            save_fname = make_save_name(save_dir, bird_name, field_name, colour_palette, cs,
+                                                        colour_option=common_colour_scaling)
 
                             colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname
-                                                                      , bounding_box=aus_bounding_box
-                                                                      , colour_map=colourings , quality=figure_quality
-                                                                      , plot_background=plot_background_colour
-                                                                      , show_frame=draw_frame, normalisation=cs
-                                                                      , colour_min_max=scaling_limits)
+                                                      , bounding_box=aus_bounding_box
+                                                      , colour_map=colour_palette, quality=figure_quality
+                                                      , plot_background=plot_background_colour
+                                                      , show_frame=draw_frame, normalisation=cs
+                                                      , colour_min_max=scaling_limits)
 
             if plot_subregion_fd is True and product == 'aus_agri_products':
 
@@ -316,17 +308,12 @@ for fd_seg in fd_segments:
                                 for cs in colour_normalisation:
 
                                     # Send to plotter
-                                    description = field_name.lower().replace('footprints_', '')
-                                    clean_bird_name = clean_string(bird_name, [' ', "'"], '_', case='lower')
-                                    save_fname = (save_dir + '/' + clean_bird_name + '_' + description + '_'
-                                                  + colourings.lower() + '_' + cs)
-                                    if common_colour_scaling:
-                                        save_fname = save_fname + '_comcol'
-                                    save_fname = save_fname + '.png'
+                                    save_fname = make_save_name(save_dir, bird_name, field_name, colour_palette, cs,
+                                                                colour_option=common_colour_scaling)
 
                                     colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname
                                                               , bounding_box=aus_bounding_box
-                                                              , colour_map=colourings, quality=figure_quality
+                                                              , colour_map=colour_palette, quality=figure_quality
                                                               , plot_background=plot_background_colour
                                                               , show_frame=draw_frame, normalisation=cs
                                                               , colour_min_max=scaling_limits)
@@ -345,7 +332,6 @@ for fd_seg in fd_segments:
                     for i, b in enumerate(bird_labels):
 
                         bird_name = bird_labels[i]
-                        clean_bird_name = clean_string(bird_name, [' ', "'"], '_', case='lower')
 
                         for z, base_regions_subset in enumerate(custom_regions):
 
@@ -355,7 +341,8 @@ for fd_seg in fd_segments:
                             for k in base_regions_subset:
 
                                 # Unpack footprints from store
-                                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
+                                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) \
+                                             + '_' + stressor
                                 footprints_by_subregion_and_br = list(f[field_name])
 
                                 # Fix orientation of footprints data
@@ -393,16 +380,13 @@ for fd_seg in fd_segments:
                                     print('Check scaling!')
 
                                 # Send to plotter
-                                save_fname = (save_dir + '/' + clean_bird_name + '_' + fd_seg + '_' + product + '_'
-                                              + colourings.lower() + '_' + cs + '_' + custom_region_labels[z])
-
-                                if common_colour_scaling:
-                                    save_fname = save_fname + '_comcol'
-                                save_fname = save_fname + '.png'
+                                save_fname = make_save_name(save_dir, bird_name + '_' + custom_region_labels[z],
+                                                            field_name, colour_palette, cs,
+                                                            colour_option=common_colour_scaling)
 
                                 colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname
                                                           , bounding_box=aus_bounding_box
-                                                          , colour_map=colourings, quality=figure_quality
+                                                          , colour_map=colour_palette, quality=figure_quality
                                                           , plot_background=plot_background_colour
                                                           , show_frame=draw_frame, normalisation=cs
                                                           , colour_min_max=scaling_limits)
@@ -426,7 +410,8 @@ for fd_seg in fd_segments:
                         for k in base_regions_subset:  # Each base region in the set
 
                             # Unpack footprints from store
-                            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
+                            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) \
+                                         + '_' + stressor
                             footprints_by_subregion_and_br = list(f[field_name])
 
                             # Fix orientation of footprints data
@@ -464,16 +449,13 @@ for fd_seg in fd_segments:
                                 print('Check scaling!')
 
                             # Send to plotter
-                            save_fname = (save_dir + '/custom_birds_' + fd_seg + '_' + product + '_'
-                                          + colourings.lower() + '_' + cs + '_' + custom_region_labels[z])
-
-                            if common_colour_scaling:
-                                save_fname = save_fname + '_comcol'
-                            save_fname = save_fname + '.png'
+                            save_fname = make_save_name(save_dir, 'custom_birds_' + custom_region_labels[z],
+                                                        field_name, colour_palette, cs,
+                                                        colour_option=common_colour_scaling)
 
                             colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname
                                                       , bounding_box=aus_bounding_box
-                                                      , colour_map=colourings, quality=figure_quality
+                                                      , colour_map=colour_palette, quality=figure_quality
                                                       , plot_background=plot_background_colour
                                                       , show_frame=draw_frame, normalisation=cs
                                                       , colour_min_max=scaling_limits)
@@ -516,13 +498,11 @@ if plot_all_birds_at_sa2 is True:
 
                     # Send to plotter
                     description = field_name.lower().replace('footprints_', '')
-                    save_fname = save_dir + '/' + 'all_birds_' + description + '_' + colourings.lower() + '_' + cs
-                    if common_colour_scaling:
-                        save_fname = save_fname + '_comcol'
-                    save_fname = save_fname + '_sa2' + '.png'
+                    save_fname = make_save_name(save_dir, 'all_birds_sa2', field_name, colour_palette, cs,
+                                                colour_option=common_colour_scaling)
 
                     colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
-                                              bounding_box=aus_bounding_box, colour_map=colourings,
+                                              bounding_box=aus_bounding_box, colour_map=colour_palette,
                                               plot_background=plot_background_colour, show_frame=draw_frame
                                               , normalisation=cs, quality=figure_quality, colour_min_max=scaling_limits)
 
