@@ -41,8 +41,8 @@ aus_bounding_box = [112, 155, -45, -9]
 
 # Footprint dimensions
 fd_segments = ['ALL', 'USA']  # , 'JPN', 'DEU', 'GBR', 'DEU', 'CHN', IND, FRA
-fd_products = ['aus_agri_products', 'all_products']  # , 'aus_products', 'all_agri_products'
-stressor = 'threatsall'  # , 'threatsbeef']
+fd_products = ['aus_agri_products', 'all_products', 'aus_products']  # , 'aus_products', 'all_agri_products'
+stressors = 'threatsbeef'  # ['threatsall', 'threatsbeef']
 
 # Options
 clean_save_dir = False  # Deletes previous results!
@@ -51,13 +51,14 @@ draw_frame = False  # Frame around plot
 divide_intensity_among_sa2s = True  # divide total threat intensity among member SA2s in base region
 colour_palette = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
 plot_background_colour = 'gainsboro'
-colour_normalisation = ['symlog', 'linear']  # , 'log'
+colour_normalisation = ['symlog']  # , 'log', 'linear'
 figure_quality = 600  # dpi
 common_colour_options = [True]  # True, False
 results_offset = 4  # 1
+force_scaling = 'all_products'  # 'all_products' or None
 
 plot_all_birds = False  # All bird footprints, driven by a country, on the one figure
-plot_all_birds_at_sa2 = True
+plot_all_birds_at_sa2 = True  # All bird footprints, driven by a country, on the one figure, at SA2 resolution
 plot_separate_birds = False  # Each bird and country pair plotted on a new figure
 plot_subregion_fd = False
 plot_custom_region_groups = False
@@ -95,7 +96,7 @@ if True in common_colour_options:
         combine = []
 
         for fd_seg in fd_segments:
-            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
+            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressors
             footprints_by_subregion = list(f[field_name])
             combine.append(flatten_list(footprints_by_subregion))
 
@@ -117,7 +118,7 @@ if True in common_colour_options:
 
             for fd_seg in fd_segments:
 
-                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
+                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressors
                 footprints_by_subregion = list(f[field_name])
                 footprints_by_subregion = np.transpose(footprints_by_subregion)
                 combine.append(footprints_by_subregion[i])
@@ -134,7 +135,7 @@ if True in common_colour_options:
         for k in base_regions:
 
             # Unpack footprints from store
-            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressor
+            field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) + '_' + stressors
             footprints_by_subregion = list(f[field_name])
             combine.append(flatten_list(footprints_by_subregion))
 
@@ -145,7 +146,7 @@ else:
     limits_of_product_sets = []
 
 # Test input data
-test_field = 'footprints_fdsegUSA_aus_products' + '_' + stressor
+test_field = 'footprints_fdsegUSA_aus_products' + '_' + stressors
 test_bird = 'Alligator Rivers Yellow Chat'
 if test_field in list(f) and test_bird in bird_labels:
 
@@ -164,7 +165,7 @@ for fd_seg in fd_segments:
     for product in fd_products:
 
         # Unpack footprints from store
-        field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor
+        field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressors
         footprints_by_subregion = list(f[field_name])
 
         # Fix orientation of footprints data (no. of subregions in the SA2 list matches no. of footprints regions)
@@ -342,7 +343,7 @@ for fd_seg in fd_segments:
 
                                 # Unpack footprints from store
                                 field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) \
-                                             + '_' + stressor
+                                             + '_' + stressors
                                 footprints_by_subregion_and_br = list(f[field_name])
 
                                 # Fix orientation of footprints data
@@ -411,7 +412,7 @@ for fd_seg in fd_segments:
 
                             # Unpack footprints from store
                             field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + str(int(k)) \
-                                         + '_' + stressor
+                                         + '_' + stressors
                             footprints_by_subregion_and_br = list(f[field_name])
 
                             # Fix orientation of footprints data
@@ -470,7 +471,7 @@ if plot_all_birds_at_sa2 is True:
             for product in fd_products:
 
                 # Unpack footprints from store
-                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressor + '_sa2'
+                field_name = 'footprints_fdseg' + fd_seg + '_' + product + '_' + stressors + '_sa2'
                 footprints_by_subregion = list(f[field_name])
 
                 # Fix orientation of footprints data
@@ -478,10 +479,14 @@ if plot_all_birds_at_sa2 is True:
                 assert len(subnat_region_legend) == footprints_by_subregion[0].shape[0]
                 assert len(footprints_by_subregion) == len(bird_labels)
 
-                # Colour scaling can be set to use same min-max for all figures (should SA2s have own colour scaling??)
+                # Colour scaling can be set to use same min-max for all figures
                 if common_colour_scaling:
-                    scaling_limits = (limits_of_product_sets[product]['min'] * 0.95,
-                                      limits_of_product_sets[product]['max'] * 1.05)
+                    if force_scaling is not None:
+                        scaling_limits = (limits_of_product_sets[force_scaling]['min'] * 0.95,
+                                          limits_of_product_sets[force_scaling]['max'] * 1.05)
+                    else:
+                        scaling_limits = (limits_of_product_sets[product]['min'] * 0.95,
+                                          limits_of_product_sets[product]['max'] * 1.05)
                 else:
                     scaling_limits = None
 
@@ -504,7 +509,8 @@ if plot_all_birds_at_sa2 is True:
                     colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname,
                                               bounding_box=aus_bounding_box, colour_map=colour_palette,
                                               plot_background=plot_background_colour, show_frame=draw_frame
-                                              , normalisation=cs, quality=figure_quality, colour_min_max=scaling_limits)
+                                              , normalisation=cs, quality=figure_quality
+                                              , colour_min_max=scaling_limits)
 
 print('.')
 print('Finished')

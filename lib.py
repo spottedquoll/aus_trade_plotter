@@ -181,6 +181,7 @@ def get_port_index(port_name, port_locations):
 def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, colour_option=None):
 
     prefix = clean_string(prefix, [' ', "'"], '_', case='lower')
+    field_name = field_name.replace('fdseg', 'fd')
     description = field_name.lower().replace('footprints_', '')
 
     save_fname = save_dir + '/' + prefix + '_' + description + '_' + colour_name.lower() + '_' + normalisation
