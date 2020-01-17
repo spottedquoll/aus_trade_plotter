@@ -3,9 +3,10 @@ import h5py
 import numpy as np
 import shutil
 from spatial import read_shape_files, read_sa2_meta
-from lib import colour_polygons_by_vector, make_save_name
+from lib import colour_polygons_by_vector, make_save_name, make_sa2_adjacency
 from utils import flatten_list, is_empty, is_within_tolerance
 from pyexcel_xlsx import get_data
+import geopandas as gp
 
 print('Starting footprint plotter')
 
@@ -15,8 +16,8 @@ asgs_path = os.environ['asgs_dir'] + 'SA2/2011/'
 sa2_meta_store = read_sa2_meta(asgs_path + 'SA2_2011_AUST.xlsx')
 all_shapes = read_shape_files(asgs_path + 'SA2_2011_AUST.shp')
 
-if len(all_shapes) != len(sa2_meta_store):
-    raise ValueError('SA2 meta version is different to the shape file version')
+n_sa2s = len(sa2_meta_store)
+assert len(all_shapes) == n_sa2s, 'SA2 meta version is different to the shape file version'
 
 # Read footprint results
 birds_dir = os.environ['birds_dir']
@@ -25,7 +26,7 @@ f = h5py.File(filename, 'r')
 
 # Relate the base regions to the SA2 regions
 subnat_region_legend = flatten_list(list(f['subnat_region_legend']))
-n_sa2s = len(subnat_region_legend)
+assert n_sa2s == len(subnat_region_legend)
 base_regions = list(set(subnat_region_legend))
 
 base_region_state_key = read_sa2_meta(birds_dir + '/results/' + 'base_region_state_member_labels.csv')
@@ -56,6 +57,7 @@ figure_quality = 600  # dpi
 common_colour_options = [True]  # True, False
 results_offset = 4  # 1
 force_scaling = 'all_products'  # 'all_products' or None
+apply_polygon_smearing = True
 
 plot_all_birds = False  # All bird footprints, driven by a country, on the one figure
 plot_all_birds_at_sa2 = True  # All bird footprints, driven by a country, on the one figure, at SA2 resolution
@@ -156,6 +158,13 @@ if test_field in list(f) and test_bird in bird_labels:
 
     test_set = footprints_by_subregion[bird_labels.index(test_bird)]
     assert np.nonzero(test_set)[0][0] == 20 - 1  # corresponding to base region 20 (will fail if regagg changes)
+
+if apply_polygon_smearing:
+    print('Building SA2 adjacency matrix')
+
+    df = gp.read_file(asgs_path + 'SA2_2011_AUST.shp')  # open file
+    adjacency_matrix = make_sa2_adjacency(df, n_sa2s)
+    assert len(adjacency_matrix) == n_sa2s and len(adjacency_matrix[0]) == n_sa2s
 
 # Loop over countries
 for fd_seg in fd_segments:
@@ -498,6 +507,9 @@ if plot_all_birds_at_sa2 is True:
 
                 assert not is_empty(intensity_by_sa2)
                 assert sum(intensity_by_sa2) > 0
+
+                if apply_polygon_smearing:
+                    intensity_by_sa2 = smear_adjacent_values(intensity_by_sa2, adjacency_matrix, rounds=1)
 
                 for cs in colour_normalisation:
 

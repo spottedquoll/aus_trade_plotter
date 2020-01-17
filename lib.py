@@ -5,7 +5,7 @@ from shapely.geometry import Polygon
 from descartes.patch import PolygonPatch
 import numpy as np
 from numpy import genfromtxt
-from utils import clean_string
+from utils import clean_string, is_empty
 import pandas
 
 
@@ -191,3 +191,40 @@ def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, col
 
     save_fname = save_fname + '.png'
     return save_fname
+
+
+def make_sa2_adjacency(gp_df, n_sa2s):
+
+    adjacency = []
+
+    for index, row in gp_df.iterrows():
+        print(str(index))
+        if row['geometry'] is not None:
+            neighbors = gp_df[gp_df.geometry.touches(row['geometry'])]
+            new_row = np.zeros(n_sa2s)
+            new_row[neighbors.index.values] = 1
+            adjacency.append(new_row)
+
+    return adjacency
+
+
+def smear_adjacent_values(values, adjacency_matrix, rounds=None):
+
+    if rounds is None:
+        rounds = 1
+
+    assert len(values) == len(adjacency_matrix)
+    assert len(values) == len(adjacency_matrix[0])
+
+    values_smeared = np.zeros(len(values))
+
+    for idx, val in enumerate(values):
+        neighbors = np.nonzero(adjacency_matrix[idx])
+        if is_empty(neighbors):
+            values_smeared = values[idx]
+        else:
+            neighboring_vals = values[neighbors]
+            smeared = np.mean(np.append(neighboring_vals, values[idx]))
+            values_smeared[idx] = smeared
+
+    return values_smeared
