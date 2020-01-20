@@ -178,7 +178,7 @@ def get_port_index(port_name, port_locations):
     return matching_ports
 
 
-def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, colour_option=None):
+def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, colour_option=None,smear_option=None):
 
     prefix = clean_string(prefix, [' ', "'"], '_', case='lower')
     field_name = field_name.replace('fdseg', 'fd')
@@ -189,6 +189,9 @@ def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, col
     if colour_option is not None and colour_option is True:
         save_fname = save_fname + '_comcol'
 
+    if smear_option is not None and smear_option is True:
+        save_fname = save_fname + '_smeared'
+
     save_fname = save_fname + '.png'
     return save_fname
 
@@ -198,33 +201,45 @@ def make_sa2_adjacency(gp_df, n_sa2s):
     adjacency = []
 
     for index, row in gp_df.iterrows():
-        print(str(index))
+        new_row = np.zeros(n_sa2s)
         if row['geometry'] is not None:
             neighbors = gp_df[gp_df.geometry.touches(row['geometry'])]
-            new_row = np.zeros(n_sa2s)
             new_row[neighbors.index.values] = 1
-            adjacency.append(new_row)
+        adjacency.append(new_row)
 
     return adjacency
 
 
-def smear_adjacent_values(values, adjacency_matrix, rounds=None):
-
-    if rounds is None:
-        rounds = 1
+def smear_adjacent_values(values, adjacency_matrix, mixing=None, maintain_sum=False):
 
     assert len(values) == len(adjacency_matrix)
     assert len(values) == len(adjacency_matrix[0])
 
+    if mixing is not None:
+        assert mixing > 0
+        assert mixing < 1
+
     values_smeared = np.zeros(len(values))
 
     for idx, val in enumerate(values):
+
         neighbors = np.nonzero(adjacency_matrix[idx])
         if is_empty(neighbors):
             values_smeared = values[idx]
         else:
+
             neighboring_vals = values[neighbors]
-            smeared = np.mean(np.append(neighboring_vals, values[idx]))
+            assert not np.isnan(neighboring_vals).any()
+
+            if mixing is None:
+                smeared = np.mean(np.append(neighboring_vals, values[idx]))
+            else:
+                # weighted mean
+                smeared = np.mean(neighboring_vals)*mixing + values[idx]*(1-mixing)
             values_smeared[idx] = smeared
+
+    if maintain_sum is True:
+        if sum(values_smeared) != sum(values):
+            values_smeared = values_smeared * (sum(values)/sum(values_smeared))
 
     return values_smeared
