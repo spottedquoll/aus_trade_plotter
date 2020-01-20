@@ -39,9 +39,9 @@ class MplColorHelper:
 
 
 def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_file_name, bounding_box=None
-                              , normalisation='linear', colour_map='plasma', attach_colorbar=False, discrete_bins=None
-                              , colour_min_max=None, polygon_edge='none', plot_background=None, show_frame=True
-                              , quality=900):
+                              , normalisation_str='linear', colour_map='plasma', attach_colorbar=False
+                              , discrete_bins=None, colour_min_max=None, polygon_edge='none', plot_background=None
+                              , show_frame=True, quality=900):
 
     # Determine colour scaling from data or use exogenous data
     if colour_min_max is None:
@@ -51,7 +51,7 @@ def colour_polygons_by_vector(colour_scale_data, all_shapes, sub_regions, save_f
         min_val = colour_min_max[0]
         max_val = colour_min_max[1]
 
-    colour_scaling = MplColorHelper(colour_map, min_val, max_val, normalisation=normalisation
+    colour_scaling = MplColorHelper(colour_map, min_val, max_val, normalisation=normalisation_str
                                     , discrete_bins=discrete_bins)
 
     if len(colour_scale_data) != len(sub_regions):
