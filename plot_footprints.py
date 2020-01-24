@@ -42,9 +42,9 @@ aus_bounding_box = [112, 155, -45, -9]
 
 # Footprint dimensions
 fd_segments = ['ALL', 'USA']  # , 'JPN', 'DEU', 'GBR', 'DEU', 'CHN', IND, FRA
-fd_products = ['aus_agri_products', 'all_products', 'aus_products']  # , 'aus_products', 'all_agri_products'
+fd_products = ['all_products', 'aus_agri_products', 'aus_agri_products_ic']  # , 'all_products', 'aus_products', 'all_agri_products'
 stressor = 'threatsall'  # ['threatsall', 'threatsbeef']
-stress_sectors = ['threatsall', 'threatsbeef']
+stress_sectors = ['threatsall', 'threatsbeef']  # threatsall, 'threatsbeef'
 
 # Options
 clean_save_dir = False  # Deletes previous results!
@@ -54,12 +54,12 @@ divide_intensity_among_sa2s = True  # divide total threat intensity among member
 colour_palette = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
 plot_background_colour = 'gainsboro'
 colour_normalisation = 'symlog'  # 'symlog', 'log', 'linear'
-figure_quality = 600  # dpi
-common_colour_scaling = True
+figure_quality = 700  # dpi
+common_colour_scaling = True # True, False
 results_offset = 4  # 1
-force_scaling = 'all_products'  # 'all_products' or None
-apply_polygon_smearing = True
-smearing_opts = [True, False]
+force_scaling = None  # 'all_products' or None
+apply_polygon_smearing = False
+smearing_opts = [False]  # True, False
 
 plot_all_birds = False  # All bird footprints, driven by a country, on the one figure
 plot_all_birds_at_sa2 = True  # All bird footprints, driven by a country, on the one figure, at SA2 resolution
@@ -67,7 +67,7 @@ plot_separate_birds = False  # Each bird and country pair plotted on a new figur
 plot_subregion_fd = False
 plot_custom_region_groups = False
 plot_custom_bird_groups = False
-plot_global_mrio_footprints = False # Footprints calculated using the non-nested Global mrio
+plot_global_mrio_footprints = True  # Footprints calculated using the non-nested Global mrio
 
 # Custom regions [[NSW, Qld], Qld only, NT and WA]
 custom_regions = [[1, 3, 7, 12, 13, 14, 15, 16, 17, 18, 19]
@@ -162,7 +162,7 @@ if test_field in list(f) and test_bird in bird_labels:
     test_set = footprints_by_subregion[bird_labels.index(test_bird)]
     assert np.nonzero(test_set)[0][0] == 20 - 1  # corresponding to base region 20 (will fail if regagg changes)
 
-if apply_polygon_smearing:
+if apply_polygon_smearing or True in smearing_opts:
     print('Building SA2 adjacency matrix')
 
     df = gp.read_file(asgs_path + 'SA2_2011_AUST.shp')  # open file
@@ -520,6 +520,10 @@ if plot_all_birds_at_sa2 is True:
 
 if plot_global_mrio_footprints is True:
 
+    # Read footprint results
+    filename = birds_dir + '/results/' + 'footprints_global.h5'
+    f = h5py.File(filename, 'r')
+
     print('Plotting footprints from global MRIO at SA2')
     for stress in stress_sectors:
         for fd_seg in fd_segments:
@@ -554,6 +558,7 @@ if plot_global_mrio_footprints is True:
 
                     assert not is_empty(intensity_by_sa2)
                     assert sum(intensity_by_sa2) > 0
+                    assert is_within_tolerance(sum(sum(footprints_by_subregion)), sum(intensity_by_sa2), 0.001)
 
                     if polygon_smearing:
                         intensity_by_sa2 = smear_adjacent_values(intensity_by_sa2, adjacency_matrix, mixing=0.25
