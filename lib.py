@@ -27,6 +27,8 @@ class MplColorHelper:
                 self.norm = mpl.colors.LogNorm(vmin=min_val, vmax=max_val)
             elif normalisation is 'symlog':
                 self.norm = mpl.colors.SymLogNorm(linthresh=0.03, linscale=0.03, vmin=min_val, vmax=max_val)
+
+                # , base='None' Base None corresponds to np.e
             else:
                 raise ValueError('Unknown normalisation method')
 
@@ -182,9 +184,10 @@ def make_save_name(save_dir, prefix, field_name, colour_name, normalisation, col
 
     prefix = clean_string(prefix, [' ', "'"], '_', case='lower')
     field_name = field_name.replace('fdseg', 'fd')
+    field_name = field_name.replace('/', '')
     description = field_name.lower().replace('footprints_', '')
 
-    save_fname = save_dir + '/' + prefix + '_' + description + '_' + colour_name.lower() + '_' + normalisation
+    save_fname = save_dir + prefix + '_' + description + '_' + colour_name.lower() + '_' + normalisation
 
     if colour_option is not None and colour_option is True:
         save_fname = save_fname + '_comcol'

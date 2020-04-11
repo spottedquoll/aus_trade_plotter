@@ -10,9 +10,14 @@ import geopandas as gp
 
 print('Starting footprint plotter')
 
-# Get SA2 meta information and shape files
-asgs_path = os.environ['asgs_dir'] + 'SA2/2011/'
+# Check directories
+birds_dir = os.environ['birds_dir']
+assert os.path.isdir(birds_dir) is True
 
+asgs_path = os.environ['asgs_dir'] + 'SA2/2011/'
+assert os.path.isdir(asgs_path) is True
+
+# Read SA2 meta
 sa2_meta_store = read_sa2_meta(asgs_path + 'SA2_2011_AUST.xlsx')
 all_shapes = read_shape_files(asgs_path + 'SA2_2011_AUST.shp')
 
@@ -20,8 +25,7 @@ n_sa2s = len(sa2_meta_store)
 assert len(all_shapes) == n_sa2s, 'SA2 meta version is different to the shape file version'
 
 # Read footprint results
-birds_dir = os.environ['birds_dir']
-filename = birds_dir + '/results/' + 'footprints.h5'
+filename = birds_dir + 'results/' + 'footprints.h5'
 f = h5py.File(filename, 'r')
 
 # Relate the base regions to the SA2 regions
@@ -42,9 +46,9 @@ aus_bounding_box = [112, 155, -45, -9]
 
 # Footprint dimensions
 fd_segments = ['ALL', 'USA']  # , 'JPN', 'DEU', 'GBR', 'DEU', 'CHN', IND, FRA
-fd_products = ['all_products', 'aus_agri_products', 'aus_agri_products_ic']  # , 'all_products', 'aus_products', 'all_agri_products'
+fd_products = ['all_products', 'aus_agri_products_ic']  # , 'all_products', 'all_agri_products', 'aus_agri_products', 'aus_products'
 stressor = 'threatsall'  # ['threatsall', 'threatsbeef']
-stress_sectors = ['threatsall', 'threatsbeef']  # threatsall, 'threatsbeef'
+stress_sectors = ['threatsall', 'threatsbeef']
 
 # Options
 clean_save_dir = False  # Deletes previous results!
@@ -54,12 +58,13 @@ divide_intensity_among_sa2s = True  # divide total threat intensity among member
 colour_palette = 'BuPu'  # 'RdPu'  # 'Purples'  # 'PuRd'  # 'plasma' # BuPu
 plot_background_colour = 'gainsboro'
 colour_normalisation = 'symlog'  # 'symlog', 'log', 'linear'
-figure_quality = 700  # dpi
-common_colour_scaling = True # True, False
+figure_quality = 500  # dpi
+common_colour_scaling = False
 results_offset = 4  # 1
 force_scaling = None  # 'all_products' or None
 apply_polygon_smearing = False
 smearing_opts = [False]  # True, False
+test_alligator_location = False
 
 plot_all_birds = False  # All bird footprints, driven by a country, on the one figure
 plot_all_birds_at_sa2 = True  # All bird footprints, driven by a country, on the one figure, at SA2 resolution
@@ -78,6 +83,9 @@ custom_region_labels = ['NSW&Qld', 'Qld', 'NT&WA']
 
 # Alligator Rivers Yellow Chat, Noisy Scrub-bird, Southern Black-throated Finch, Southern Cassowary
 custom_bird_subset = [0, 10, 11, 12, 13]
+
+filter_birds = False
+filter_birds_list = ['Buff-breasted Button-quail', 'Coxen''s Fig-Parrot', 'Golden-shouldered Parrot']
 
 # Output directory
 print('Creating save directory')
@@ -151,16 +159,17 @@ else:
     limits_of_product_sets = []
 
 # Test input data
-test_field = 'footprints_fdsegUSA_aus_products' + '_' + stressor
-test_bird = 'Alligator Rivers Yellow Chat'
-if test_field in list(f) and test_bird in bird_labels:
+if test_alligator_location:
+    test_field = 'footprints_fdsegUSA_aus_products' + '_' + stressor
+    test_bird = 'Alligator Rivers Yellow Chat'
+    if test_field in list(f) and test_bird in bird_labels:
 
-    footprints_by_subregion = list(f[test_field])
-    footprints_by_subregion = np.transpose(footprints_by_subregion)
-    assert len(footprints_by_subregion) == len(bird_labels)
+        footprints_by_subregion = list(f[test_field])
+        footprints_by_subregion = np.transpose(footprints_by_subregion)
+        assert len(footprints_by_subregion) == len(bird_labels)
 
-    test_set = footprints_by_subregion[bird_labels.index(test_bird)]
-    assert np.nonzero(test_set)[0][0] == 20 - 1  # corresponding to base region 20 (will fail if regagg changes)
+        test_set = footprints_by_subregion[bird_labels.index(test_bird)]
+        assert np.nonzero(test_set)[0][0] == 20 - 1  # corresponding to base region 20 (will fail if regagg changes)
 
 if apply_polygon_smearing or True in smearing_opts:
     print('Building SA2 adjacency matrix')
@@ -499,7 +508,8 @@ if plot_all_birds_at_sa2 is True:
 
                     # Get the footprints for each bird
                     for i, b in enumerate(bird_labels):
-                        intensity_by_sa2 = intensity_by_sa2 + footprints_by_subregion[i]
+                        if not filter_birds or (filter_birds and b not in filter_birds_list):
+                            intensity_by_sa2 = intensity_by_sa2 + footprints_by_subregion[i]
 
                     assert not is_empty(intensity_by_sa2)
                     assert sum(intensity_by_sa2) > 0
@@ -508,7 +518,9 @@ if plot_all_birds_at_sa2 is True:
                         intensity_by_sa2 = smear_adjacent_values(intensity_by_sa2, adjacency_matrix, mixing=0.33)
 
                     # Send to plotter
-                    description = 'all_birds_sa2'
+                    description = 'all_birds_sa2_subnat'
+                    if filter_birds:
+                        description = description + '_fb'
                     save_fname = make_save_name(save_dir, description, field_name, colour_palette, colour_normalisation,
                                                 colour_option=common_colour_scaling, smear_option=polygon_smearing)
 
@@ -554,21 +566,25 @@ if plot_global_mrio_footprints is True:
 
                     # Get the footprints for each bird
                     for i, b in enumerate(bird_labels):
-                        intensity_by_sa2 = intensity_by_sa2 + footprints_by_subregion[i]
+                        if not filter_birds or (filter_birds and b not in filter_birds_list):
+                            intensity_by_sa2 = intensity_by_sa2 + footprints_by_subregion[i]
 
                     assert not is_empty(intensity_by_sa2)
                     assert sum(intensity_by_sa2) > 0
-                    assert is_within_tolerance(sum(sum(footprints_by_subregion)), sum(intensity_by_sa2), 0.001)
+                    if not filter_birds:
+                        assert is_within_tolerance(sum(sum(footprints_by_subregion)), sum(intensity_by_sa2), 0.001)
 
                     if polygon_smearing:
                         intensity_by_sa2 = smear_adjacent_values(intensity_by_sa2, adjacency_matrix, mixing=0.25
                                                                  , maintain_sum=True)
 
                     # Send to plotter
-                    description = 'all_birds_sa2'
+                    description = 'all_birds_sa2_global'
+                    field_name = field_name.replace('global_mrio_', 'fd')
+                    if filter_birds:
+                        description = description + '_fb'
                     save_fname = make_save_name(save_dir, description, field_name, colour_palette, colour_normalisation,
                                                 colour_option=common_colour_scaling, smear_option=polygon_smearing)
-
                     colour_polygons_by_vector(intensity_by_sa2, all_shapes, regions_to_plot, save_fname
                                               , bounding_box=aus_bounding_box, colour_map=colour_palette
                                               , plot_background=plot_background_colour, show_frame=draw_frame
