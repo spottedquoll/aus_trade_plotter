@@ -15,17 +15,17 @@ clean_save_dir = False  # Deletes previous results!
 draw_frame = False  # Frame around plot
 colour_palette = 'BuPu'
 plot_background_colour = 'gainsboro'
-colour_normalisation = 'symlog' # 'linear'  #
+colour_normalisation = 'symlog'  # 'linear'  #
 figure_quality = 500  # dpi
-common_colour_scaling = False
+common_colour_scaling = True
 force_scaling = None  # 'all_products' or None
 polygon_smearing = False
 normalise_set_totals = True
 log_scale_z = False
-filter_birds = True
+filter_birds = False
 scaler = 300  # 50
 color_bar = True
-scaling_limits = (0, 400)
+scaling_limits = (0, 500)
 
 # Check directories
 birds_dir = os.environ['birds_dir']
@@ -82,8 +82,11 @@ filter_birds_list = ['Buff-breasted Button-quail', "Coxen's Fig-Parrot", 'Golden
 
 assert all(elem in bird_labels for elem in filter_birds_list)
 
-fields_to_plot = ['footprints_global_mrio_USA_aus_agri_products_ic_threatsall_sa2'
-                  , 'footprints_fdsegUSA_aus_agri_products_ic_threatsall_sa2']
+# fields_to_plot = ['footprints_global_mrio_USA_aus_agri_products_ic_threatsall_sa2'
+#                   , 'footprints_fdsegUSA_aus_agri_products_ic_threatsall_sa2']
+
+fields_to_plot = ['footprints_global_mrio_USA_all_products_threatsall_sa2'
+                  , 'footprints_fdsegUSA_all_products_threatsall_sa2']
 
 global_total = sum(flatten_list(list(f_global['footprints_global_mrio_USA_aus_agri_products_ic_threatsall_sa2'])))
 print('Global total is ' + '{:.2f}'.format(global_total))
@@ -137,7 +140,7 @@ for field_name in fields_to_plot:
         print('Reset global total')
 
     if normalise_set_totals and '_global' not in field_name:
-        intensity_by_sa2 = intensity_by_sa2 * global_total/dataset_total * 1.6
+        intensity_by_sa2 = intensity_by_sa2 * global_total/dataset_total  #* 1.6
 
     if not all(intensity_by_sa2 > 0):
         intensity_by_sa2 = intensity_by_sa2 + (-1*min(intensity_by_sa2))
